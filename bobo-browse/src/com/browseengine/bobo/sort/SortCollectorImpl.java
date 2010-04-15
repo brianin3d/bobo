@@ -90,7 +90,12 @@ public class SortCollectorImpl extends SortCollector {
 	
   public SortCollectorImpl(DocComparatorSource compSource,SortField[] sortFields,BoboSubBrowser boboBrowser,int offset,int count,boolean doScoring,boolean fetchStoredFields) {
 	super(sortFields,fetchStoredFields);
-    assert (offset>=0 && count>0);
+	if ( offset < 0 ) {
+		offset = 0;
+	}
+	if ( count <=0 ) {
+		count = 1;
+	}
 	_facetHandlerMap = boboBrowser.getFacetHandlerMap();
     _compSource = compSource;
     _pqList = new LinkedList<DocIDPriorityQueue>();
