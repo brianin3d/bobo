@@ -10,8 +10,8 @@ import java.util.List;
 import com.browseengine.bobo.api.BrowseFacet;
 import com.browseengine.bobo.api.FacetIterator;
 import com.browseengine.bobo.api.FacetSpec;
-import com.browseengine.bobo.api.FacetVisitor;
 import com.browseengine.bobo.facets.FacetCountCollector;
+import com.browseengine.bobo.facets.data.TermStringList;
 import com.browseengine.bobo.facets.filter.GeoFacetFilter;
 import com.browseengine.bobo.facets.impl.GeoFacetHandler.GeoFacetData;
 import com.browseengine.bobo.util.BigFloatArray;
@@ -27,12 +27,14 @@ public class GeoFacetCountCollector implements FacetCountCollector {
 	private final FacetSpec _spec;
 	private int[] _count;
 	private GeoFacetData _dataCache;
-	private final List<String> _predefinedRanges;
+	private final TermStringList _predefinedRanges;
 	private int _docBase;
 	private GeoRange[] _ranges;
 	private BigFloatArray _xvals;
 	private BigFloatArray _yvals;
 	private BigFloatArray _zvals;
+    // variable to specify if the geo distance calculations are in miles. Default is miles
+    private boolean _miles;
 	
 	public static class GeoRange {
 		private final float _lat;
@@ -74,17 +76,19 @@ public class GeoFacetCountCollector implements FacetCountCollector {
 	 * @param docBase			the base doc id
 	 * @param spec				the facet spec for this facet
 	 * @param predefinedRanges	List of ranges, where each range looks like <lat, lon: rad>
+	 * @param miles        variable to specify if the geo distance calculations are in miles. False indicates distance calculation is in kilometers
 	 */
 	protected GeoFacetCountCollector(String name, GeoFacetData dataCache,
-			int docBase, FacetSpec fspec, List<String> predefinedRanges) {
+			int docBase, FacetSpec fspec, List<String> predefinedRanges, boolean miles) {
 		_name = name;
 		_dataCache = dataCache;
 		_xvals = dataCache.get_xValArray();
 		_yvals = dataCache.get_yValArray();
 		_zvals = dataCache.get_zValArray();
 		_spec = fspec;
-		_predefinedRanges = new ArrayList<String>(predefinedRanges);
-		Collections.sort(_predefinedRanges);
+		_predefinedRanges = new TermStringList();
+    Collections.sort(predefinedRanges);
+		_predefinedRanges.addAll(predefinedRanges);
 		_docBase = docBase;
 		_count = new int[predefinedRanges.size()];
 		_ranges = new GeoRange[predefinedRanges.size()];
@@ -92,6 +96,7 @@ public class GeoFacetCountCollector implements FacetCountCollector {
 		for(String range: predefinedRanges) {
 			_ranges[index++] = parse(range);
 		}
+		_miles = miles;
 	}
 
 	/**
@@ -108,12 +113,20 @@ public class GeoFacetCountCollector implements FacetCountCollector {
 		for(GeoRange range: _ranges) {
 			// the countIndex for the count array should increment with the range index of the _ranges array
 			countIndex++;
-			radius = GeoMatchUtil.getMilesRadiusCosine(range.getRad());
+			if(_miles)
+			  radius = GeoMatchUtil.getMilesRadiusCosine(range.getRad());
+			else
+			  radius = GeoMatchUtil.getKMRadiusCosine(range.getRad());
+			
 			float[] coords = GeoMatchUtil.geoMatchCoordsFromDegrees(range.getLat(), range.getLon());
 			targetX = coords[0];
 			targetY = coords[1];
 			targetZ = coords[2];
-			delta = (float)(range.getRad()/GeoMatchUtil.EARTH_RADIUS_MILES);
+			
+			if(_miles)
+			  delta = (float)(range.getRad()/GeoMatchUtil.EARTH_RADIUS_MILES);
+			else
+			  delta = (float)(range.getRad()/GeoMatchUtil.EARTH_RADIUS_KM);
 			
 			xu = targetX + delta;
 			xl = targetX - delta;
@@ -248,11 +261,5 @@ public class GeoFacetCountCollector implements FacetCountCollector {
 	
 	public FacetIterator iterator() {
 		return new DefaultFacetIterator(_predefinedRanges, _count, true);
-	}
-
-	public void visitFacets(FacetVisitor visitor) {
-		for(int i = 0; i < _count.length; i++) {
-			visitor.visit(_predefinedRanges.get(i), _count[i]);
-		}			
 	}
 }

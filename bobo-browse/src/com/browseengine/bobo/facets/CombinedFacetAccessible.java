@@ -13,15 +13,18 @@ import com.browseengine.bobo.api.BrowseFacet;
 import com.browseengine.bobo.api.FacetAccessible;
 import com.browseengine.bobo.api.FacetIterator;
 import com.browseengine.bobo.api.FacetSpec;
-import com.browseengine.bobo.api.FacetVisitor;
+import com.browseengine.bobo.api.IntFacetIterator;
 import com.browseengine.bobo.api.FacetSpec.FacetSortSpec;
 import com.browseengine.bobo.facets.impl.CombinedFacetIterator;
+import com.browseengine.bobo.facets.impl.CombinedIntFacetIterator;
+import com.browseengine.bobo.facets.impl.DefaultIntFacetIterator;
 
 /**
  * @author nnarkhed
  *
  */
-public class CombinedFacetAccessible implements FacetAccessible {
+public class CombinedFacetAccessible implements FacetAccessible 
+{
 
   private final List<FacetAccessible> _list;
   private final FacetSpec _fspec;
@@ -32,11 +35,13 @@ public class CombinedFacetAccessible implements FacetAccessible {
     _fspec = fspec;
   }
 
-  public String toString() {
+  public String toString() 
+  {
     return "_list:"+_list+" _fspec:"+_fspec;
   }
 
-  public BrowseFacet getFacet(String value) {
+  public BrowseFacet getFacet(String value) 
+  {
     int sum=-1;
     String foundValue=null;
     if (_list!=null)
@@ -56,7 +61,8 @@ public class CombinedFacetAccessible implements FacetAccessible {
     return new BrowseFacet(foundValue,sum);
   }
 
-  public List<BrowseFacet> getFacets() {
+  public List<BrowseFacet> getFacets() 
+  {
     int maxCnt = _fspec.getMaxCount();
     if(maxCnt <= 0)
       maxCnt = Integer.MAX_VALUE;
@@ -64,17 +70,15 @@ public class CombinedFacetAccessible implements FacetAccessible {
     LinkedList<BrowseFacet> list = new LinkedList<BrowseFacet>();
 
     int cnt = 0;
-    String facet = null;
-    CombinedFacetIterator iter = (CombinedFacetIterator)this.iterator();
-    int count = 0;
+    Comparable facet = null;
+    FacetIterator iter = (FacetIterator)this.iterator();
     Comparator<BrowseFacet> comparator;
     if (FacetSortSpec.OrderValueAsc.equals(_fspec.getOrderBy()))
     {
       while((facet = iter.next(minHits)) != null) 
       {
         // find the next facet whose combined hit count obeys minHits
-        count = iter.getFacetCount();
-        list.add(new BrowseFacet(facet, count));
+        list.add(new BrowseFacet(String.valueOf(facet), iter.count));
         if(++cnt >= maxCnt) break;                  
       }
     }
@@ -100,25 +104,20 @@ public class CombinedFacetAccessible implements FacetAccessible {
         int qsize = 0;
         while( (qsize < maxCnt) && ((facet = iter.next(minHits)) != null) )
         {
-          count = iter.getFacetCount();
-          queue.add(new BrowseFacet(facet, count));
+          queue.add(new BrowseFacet(String.valueOf(facet), iter.count));
           qsize++;
         }
         if(facet != null)
         {
           BrowseFacet rootFacet = (BrowseFacet)queue.top();
+          minHits = rootFacet.getHitCount() + 1;
+          // facet count less than top of min heap, it will never be added 
           while(((facet = iter.next(minHits)) != null))
           {
-            // check with the top of min heap
-            count = iter.getFacetCount();
-            // if facet count less than top of min heap, it should never be added 
-            if(count > rootFacet.getHitCount())
-            {
-              rootFacet.setValue(facet);
-              rootFacet.setHitCount(count);
-              rootFacet = (BrowseFacet) queue.updateTop();
-              minHits = rootFacet.getHitCount() + 1;
-            }
+            rootFacet.setValue(String.valueOf(facet));
+            rootFacet.setHitCount(iter.count);
+            rootFacet = (BrowseFacet) queue.updateTop();
+            minHits = rootFacet.getHitCount() + 1;
           }
         }
         // at this point, queue contains top maxCnt facets that have hitcount >= minHits
@@ -132,7 +131,7 @@ public class CombinedFacetAccessible implements FacetAccessible {
       {
         // no maxCnt specified. So fetch all facets according to minHits and sort them later
         while((facet = iter.next(minHits)) != null)
-          list.add(new BrowseFacet(facet, iter.getFacetCount()));
+          list.add(new BrowseFacet(String.valueOf(facet), iter.count));
         Collections.sort(list, comparator);
       }
     }
@@ -146,8 +145,7 @@ public class CombinedFacetAccessible implements FacetAccessible {
         int qsize = 0;
         while( (qsize < maxCnt) && ((facet = iter.next(minHits)) != null) )
         {
-          count = iter.getFacetCount();
-          queue.add(new BrowseFacet(facet, count));
+          queue.add(new BrowseFacet(String.valueOf(facet), iter.count));
           qsize++;
         }
         if(facet != null)
@@ -155,12 +153,9 @@ public class CombinedFacetAccessible implements FacetAccessible {
           while((facet = iter.next(minHits)) != null)
           {
             // check with the top of min heap
-            // if facet count less than top of min heap, it should never be added 
-            browseFacet.setHitCount(count);
-            browseFacet.setValue(facet);
-            BrowseFacet ejectedFacet = (BrowseFacet)queue.insertWithOverflow(browseFacet);
-            if(ejectedFacet != browseFacet)
-              browseFacet = ejectedFacet;
+            browseFacet.setHitCount(iter.count);
+            browseFacet.setValue(String.valueOf(facet));
+            browseFacet = (BrowseFacet)queue.insertWithOverflow(browseFacet);
           }
         }
         // remove from queue and add to the list
@@ -171,7 +166,7 @@ public class CombinedFacetAccessible implements FacetAccessible {
       {
         // order by custom but no max count supplied
         while((facet = iter.next(minHits)) != null)
-          list.add(new BrowseFacet(facet, iter.getFacetCount()));
+          list.add(new BrowseFacet(String.valueOf(facet), iter.count));
         Collections.sort(list, comparator);
       }
     }
@@ -207,15 +202,6 @@ public class CombinedFacetAccessible implements FacetAccessible {
     }
   }
 
-  /**
-   * 	@see com.browseengine.bobo.api.FacetAccessible#visitFacets(FacetVisitor)		
-   */
-  public void visitFacets(FacetVisitor visitor) {
-    for (FacetAccessible facetAccessor : _list) {
-      facetAccessor.visitFacets(visitor);			
-    }
-  }
-
   public FacetIterator iterator() {
 
     ArrayList<FacetIterator> iterList = new ArrayList<FacetIterator>(_list.size());
@@ -226,7 +212,17 @@ public class CombinedFacetAccessible implements FacetAccessible {
       if(iter != null)
         iterList.add(iter);
     }
-    return new CombinedFacetIterator(iterList, _fspec.getMinHitCount());
+    if (iterList.get(0) instanceof IntFacetIterator)
+    {
+      ArrayList<IntFacetIterator> il = new ArrayList<IntFacetIterator>();
+      for (FacetAccessible facetAccessor : _list)
+      {
+        iter = (FacetIterator) facetAccessor.iterator();
+        if(iter != null)
+          il.add((IntFacetIterator) iter);
+      }
+      return new CombinedIntFacetIterator(il, _fspec.getMinHitCount());
+    }
+    return new CombinedFacetIterator(iterList);
   }
-
 }

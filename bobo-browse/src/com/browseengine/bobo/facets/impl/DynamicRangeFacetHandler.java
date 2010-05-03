@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -18,7 +17,6 @@ import com.browseengine.bobo.api.BrowseFacet;
 import com.browseengine.bobo.api.BrowseSelection;
 import com.browseengine.bobo.api.FacetIterator;
 import com.browseengine.bobo.api.FacetSpec;
-import com.browseengine.bobo.api.FacetVisitor;
 import com.browseengine.bobo.facets.FacetCountCollector;
 import com.browseengine.bobo.facets.FacetCountCollectorSource;
 import com.browseengine.bobo.facets.RuntimeFacetHandler;
@@ -164,29 +162,12 @@ public abstract class DynamicRangeFacetHandler extends RuntimeFacetHandler<Facet
       List<BrowseFacet> facets = new ArrayList<BrowseFacet>();
       while(iter.hasNext())
       {
-        String facet = iter.next();
-        int count = iter.getFacetCount();
-//        System.out.println("Visiting Facet: " + getValueFromRangeString(facet));
-        facets.add(new BrowseFacet(getValueFromRangeString(facet), count));
+        Comparable facet = iter.next();
+        int count = iter.count;
+        facets.add(new BrowseFacet(getValueFromRangeString(String.valueOf(facet)), count));
       }
       Collections.sort(facets, ListMerger.FACET_VAL_COMPARATOR);
       return new PathFacetIterator(facets);
-    }
-
-    public void visitFacets(final FacetVisitor visitor)
-    {
-      FacetVisitor fv = new FacetVisitor()
-      {
-
-        public void visit(String facet, int count)
-        {
-          String facetstr = getValueFromRangeString(facet);
-          if (facetstr!=null)
-            visitor.visit(facetstr, count);
-        }
-        
-      };
-      super.visitFacets(fv);
     }
   }
 }

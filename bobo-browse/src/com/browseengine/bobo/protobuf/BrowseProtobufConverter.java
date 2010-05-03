@@ -24,7 +24,6 @@ import com.browseengine.bobo.api.BrowseSelection;
 import com.browseengine.bobo.api.FacetAccessible;
 import com.browseengine.bobo.api.FacetIterator;
 import com.browseengine.bobo.api.FacetSpec;
-import com.browseengine.bobo.api.FacetVisitor;
 import com.browseengine.bobo.api.BrowseSelection.ValueOperation;
 import com.browseengine.bobo.api.FacetSpec.FacetSortSpec;
 import com.browseengine.bobo.facets.impl.PathFacetIterator;
@@ -68,12 +67,6 @@ public class BrowseProtobufConverter {
 			// nothing yet
 		}
 
-		public void visitFacets(FacetVisitor visitor) {
-			for(BrowseFacet facet : _data.values()) {
-				visitor.visit(facet.getValue(), facet.getHitCount());
-			}
-		}
-		
 		public FacetIterator iterator() {
 			return new PathFacetIterator(new ArrayList<BrowseFacet>(_data.values()));
 		}

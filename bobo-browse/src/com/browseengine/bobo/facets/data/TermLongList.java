@@ -11,12 +11,13 @@ import org.apache.log4j.Logger;
 
 import com.browseengine.bobo.util.BoboSimpleDecimalFormat;
 
-public class TermLongList extends TermNumberList {
+public class TermLongList extends TermNumberList<Long> {
   private static Logger                   log = Logger.getLogger(TermLongList.class);
   private boolean simpleFormat;
   private BoboSimpleDecimalFormat _simpleFormatter;
   private ArrayList<String> _innerTermList = new ArrayList<String>();
   private String zero = "0".intern();
+  private long[] _elements = null;
 	private static long parse(String s)
 	{
 		if (s==null || s.length() == 0)
@@ -79,7 +80,9 @@ public class TermLongList extends TermNumberList {
   }
 
 	@Override
-	protected List<?> buildPrimitiveList(int capacity) {
+	protected List<?> buildPrimitiveList(int capacity)
+	{
+	  _type = Long.class;
 		return  capacity>0 ? new LongArrayList(capacity) : new LongArrayList();
 	}
 
@@ -90,10 +93,25 @@ public class TermLongList extends TermNumberList {
 		return Arrays.binarySearch(elements, val);
 	}
 
+  /* (non-Javadoc)
+   * @see com.browseengine.bobo.facets.data.TermValueList#indexOfWithType(java.lang.Object)
+   */
+  @Override
+  public int indexOfWithType(Long val)
+  {
+    return Arrays.binarySearch(_elements, val);
+  }
+
+  public int indexOfWithType(long val)
+  {
+    return Arrays.binarySearch(_elements, val);
+  }
+
 	@Override
 	public void seal() {
 		((LongArrayList)_innerList).trim();
     _innerTermList.trimToSize();
+    _elements = ((LongArrayList)_innerList).elements();
 	}
 	
 	@Override
@@ -130,5 +148,16 @@ public class TermLongList extends TermNumberList {
 
   public String format(final Long o) {
     return _simpleFormatter.format(o);
+  }
+
+  @Override
+  public boolean containsWithType(Long val)
+  {
+    return Arrays.binarySearch(_elements, val)>=0;
+  }
+
+  public boolean containsWithType(long val)
+  {
+    return Arrays.binarySearch(_elements, val)>=0;
   }
 }

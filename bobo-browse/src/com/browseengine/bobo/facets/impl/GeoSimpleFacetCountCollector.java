@@ -10,9 +10,9 @@ import java.util.List;
 import com.browseengine.bobo.api.BrowseFacet;
 import com.browseengine.bobo.api.FacetIterator;
 import com.browseengine.bobo.api.FacetSpec;
-import com.browseengine.bobo.api.FacetVisitor;
 import com.browseengine.bobo.facets.FacetCountCollector;
 import com.browseengine.bobo.facets.data.FacetDataCache;
+import com.browseengine.bobo.facets.data.TermStringList;
 import com.browseengine.bobo.facets.filter.FacetRangeFilter;
 import com.browseengine.bobo.facets.filter.GeoSimpleFacetFilter;
 import com.browseengine.bobo.util.BigSegmentedArray;
@@ -29,7 +29,7 @@ public class GeoSimpleFacetCountCollector implements FacetCountCollector {
 	private int[] _longCount;
 	private final BigSegmentedArray _latOrderArray;
 	private FacetDataCache _latDataCache;
-	private final List<String> _predefinedRanges;
+	private final TermStringList _predefinedRanges;
 	private int[][] _latPredefinedRangeIndexes;
 	private final BigSegmentedArray _longOrderArray;
 	private FacetDataCache _longDataCache;
@@ -46,8 +46,9 @@ public class GeoSimpleFacetCountCollector implements FacetCountCollector {
 		_longOrderArray = _longDataCache.orderArray;
 		_docBase = docBase;
 		_spec = spec;
-		_predefinedRanges = new ArrayList<String>(predefinedRanges);
-		Collections.sort(_predefinedRanges);
+		_predefinedRanges = new TermStringList();
+		Collections.sort(predefinedRanges);
+		_predefinedRanges.addAll(predefinedRanges);
 		
 		if(predefinedRanges != null) {
 			_latPredefinedRangeIndexes = new int[_predefinedRanges.size()][2];
@@ -207,25 +208,5 @@ public class GeoSimpleFacetCountCollector implements FacetCountCollector {
 			}
 		}
 		return new DefaultFacetIterator(_predefinedRanges, rangeCounts, true);
-	}
-	
-	public void visitFacets(FacetVisitor visitor) {
-		// each range is of the form <lat, lon, radius>
-		int[] rangeCounts = new int[_latPredefinedRangeIndexes.length];
-		for (int i=0;i<_latCount.length;++i){
-			if (_latCount[i] >0 ){
-				for (int k=0;k<_latPredefinedRangeIndexes.length;++k)
-				{
-					if (i>=_latPredefinedRangeIndexes[k][0] && i<=_latPredefinedRangeIndexes[k][1])
-					{
-						rangeCounts[k]+=_latCount[i];
-					}
-				}
-			}
-		}
-		for(int i = 0;i < rangeCounts.length;i ++) {
-			visitor.visit(_predefinedRanges.get(i), rangeCounts[i]);
-		}
-	}
-
+	}	
 }

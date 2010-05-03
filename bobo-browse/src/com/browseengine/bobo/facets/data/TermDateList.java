@@ -11,11 +11,12 @@ import java.util.List;
 /**
  * Internal data are stored in a long[] with values generated from {@link Date#getTime()}
  */
-public class TermDateList extends TermValueList {
+public class TermDateList extends TermValueList<java.util.Date> {
 
 	private ThreadLocal<SimpleDateFormat> _formatter = null;
 	private String _formatString;
-	
+	private long[] _elements;
+
 	public TermDateList(String formatString)
 	{
 		super();
@@ -77,6 +78,7 @@ public class TermDateList extends TermValueList {
 
 	@Override
 	protected List<?> buildPrimitiveList(int capacity) {
+	  _type = Date.class;
 		return capacity>0 ? new LongArrayList(capacity) : new LongArrayList();
 	}
 
@@ -111,6 +113,20 @@ public class TermDateList extends TermValueList {
 	@Override
 	public void seal() {
 		((LongArrayList)_innerList).trim();
+		_elements = ((LongArrayList)_innerList).elements();
 	}
+
+  @Override
+  public boolean containsWithType(Date val)
+  {
+    // TODO Auto-generated method stub
+    return false;
+  }
+
+  @Override
+  public int indexOfWithType(Date date)
+  {
+    return Arrays.binarySearch(_elements, date.getTime());
+  }
 
 }

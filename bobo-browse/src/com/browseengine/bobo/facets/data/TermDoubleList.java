@@ -5,8 +5,9 @@ import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class TermDoubleList extends TermNumberList {
+public class TermDoubleList extends TermNumberList<Double> {
 
+  private double[] _elements = null;
 	private static double parse(String s)
 	{
 		if (s==null || s.length() == 0)
@@ -37,7 +38,9 @@ public class TermDoubleList extends TermNumberList {
 	}
 
 	@Override
-	protected List<?> buildPrimitiveList(int capacity) {
+	protected List<?> buildPrimitiveList(int capacity)
+	{
+	  _type = Double.class;
 		return  capacity>0 ? new DoubleArrayList(capacity) : new DoubleArrayList();
 	}
 
@@ -51,6 +54,7 @@ public class TermDoubleList extends TermNumberList {
 	@Override
 	public void seal() {
 		((DoubleArrayList)_innerList).trim();
+		_elements = ((DoubleArrayList)_innerList).elements();
 	}
 
 	@Override
@@ -58,4 +62,25 @@ public class TermDoubleList extends TermNumberList {
 		return parse(o);
 	}
 
+  @Override
+  public boolean containsWithType(Double val)
+  {
+    return Arrays.binarySearch(_elements, val)>=0;
+  }
+
+  public boolean containsWithType(double val)
+  {
+    return Arrays.binarySearch(_elements, val)>=0;
+  }
+
+  @Override
+  public int indexOfWithType(Double o)
+  {
+    return Arrays.binarySearch(_elements, o);
+  }
+
+  public int indexOfWithType(double val)
+  {
+    return Arrays.binarySearch(_elements, val);
+  }
 }

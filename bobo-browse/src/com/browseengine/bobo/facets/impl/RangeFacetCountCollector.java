@@ -7,9 +7,9 @@ import java.util.List;
 import com.browseengine.bobo.api.BrowseFacet;
 import com.browseengine.bobo.api.FacetIterator;
 import com.browseengine.bobo.api.FacetSpec;
-import com.browseengine.bobo.api.FacetVisitor;
 import com.browseengine.bobo.facets.FacetCountCollector;
 import com.browseengine.bobo.facets.data.FacetDataCache;
+import com.browseengine.bobo.facets.data.TermStringList;
 import com.browseengine.bobo.facets.filter.FacetRangeFilter;
 import com.browseengine.bobo.util.BigSegmentedArray;
 
@@ -20,7 +20,7 @@ public class RangeFacetCountCollector implements FacetCountCollector
   private final BigSegmentedArray _array;
   private FacetDataCache _dataCache;
   private final String _name;
-  private final List<String> _predefinedRanges;
+  private final TermStringList _predefinedRanges;
   private int[][] _predefinedRangeIndexes;
   private int _docBase;
   
@@ -33,8 +33,9 @@ public class RangeFacetCountCollector implements FacetCountCollector
       _docBase = docBase;
       _ospec=ospec;
       if(predefinedRanges != null) {
-    	  _predefinedRanges = new ArrayList<String>(predefinedRanges);
-    	  Collections.sort(_predefinedRanges);
+    	  _predefinedRanges = new TermStringList();
+        Collections.sort(predefinedRanges);
+    	  _predefinedRanges.addAll(predefinedRanges);
       }else {
     	  _predefinedRanges = null;
       }
@@ -271,22 +272,5 @@ public class RangeFacetCountCollector implements FacetCountCollector
 		  return new DefaultFacetIterator(_predefinedRanges, rangeCounts, true);
 	  }
 	  return null;
-  }
-  
-  public void visitFacets(FacetVisitor visitor) {
-	  if (_predefinedRangeIndexes!=null)
-	  {
-        for (int k=0;k<_predefinedRangeIndexes.length;++k)
-        {
-          int count = 0;
-          int idx = _predefinedRangeIndexes[k][0];
-          int end = _predefinedRangeIndexes[k][1];
-          while(idx <= end)
-          {
-            count += _count[idx++];
-          }
-          visitor.visit(_predefinedRanges.get(k), count);
-        }
-	  }
-  }
+  }  
 }

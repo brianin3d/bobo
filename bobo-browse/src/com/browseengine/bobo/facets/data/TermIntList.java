@@ -2,6 +2,7 @@ package com.browseengine.bobo.facets.data;
 
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -11,12 +12,13 @@ import org.apache.log4j.Logger;
 
 import com.browseengine.bobo.util.BoboSimpleDecimalFormat;
 
-public class TermIntList extends TermNumberList {
+public class TermIntList extends TermNumberList<Integer> {
   private static Logger                   log = Logger.getLogger(TermIntList.class);
   private boolean simpleFormat;
-  private BoboSimpleDecimalFormat _simpleFormatter;
+  private ThreadLocal<BoboSimpleDecimalFormat> _simpleFormatter;
   private ArrayList<String> _innerTermList = new ArrayList<String>();
   private String zero = "0".intern();
+  private int[] _elements = null;
 	private static int parse(String s)
 	{
 		if (s==null || s.length() == 0)
@@ -57,30 +59,37 @@ public class TermIntList extends TermNumberList {
 	public String get(int index) {
 	  return _innerTermList.get(index);
 	}
-
+	public int getPrimitiveValue(int index)
+	{
+	  if (index<_elements.length)
+	    return _elements[index];
+	  else return -1;
+	}
 	@Override
-  public Iterator<String> iterator() {
-    final Iterator<String> iter=_innerTermList.iterator();
-    
-    return new Iterator<String>()
-    {
-      public final boolean hasNext() {
-        return iter.hasNext();
-      }
+	public Iterator<String> iterator()
+	{
+	  final Iterator<String> iter=_innerTermList.iterator();
 
-      public final String next() {
-        return iter.next();
-      }
+	  return new Iterator<String>()
+	  {
+	    public final boolean hasNext() {
+	      return iter.hasNext();
+	    }
 
-      public final void remove() {
-        throw new UnsupportedOperationException();
-      }
-    };
-  }
+	    public final String next() {
+	      return iter.next();
+	    }
+
+	    public final void remove() {
+	      throw new UnsupportedOperationException();
+	    }
+	  };
+	}
 
   @Override
 	protected List<?> buildPrimitiveList(int capacity) {
-		return  capacity>0 ? new IntArrayList(capacity) : new IntArrayList();
+          _type = Integer.class;
+         return capacity>0 ? new IntArrayList(capacity) : new IntArrayList();
 	}
 	
 	@Override
@@ -90,10 +99,25 @@ public class TermIntList extends TermNumberList {
 		return Arrays.binarySearch(elements, val);
 	}
 
+  /* (non-Javadoc)
+   * @see com.browseengine.bobo.facets.data.TermValueList#indexOfWithType(java.lang.Object)
+   */
+  @Override
+  public int indexOfWithType(Integer val)
+  {
+    return Arrays.binarySearch(_elements, val);
+  }
+
+  public int indexOfWithType(int val)
+  {
+    return Arrays.binarySearch(_elements, val);
+  }
+
 	@Override
 	public void seal() {
 		((IntArrayList)_innerList).trim();
 		_innerTermList.trimToSize();
+		_elements = ((IntArrayList)_innerList).elements();
 	}
 
 	@Override
@@ -106,7 +130,18 @@ public class TermIntList extends TermNumberList {
     if (formatString!=null && formatString.matches("0*"))
     {
       simpleFormat = true;
-      _simpleFormatter = BoboSimpleDecimalFormat.getInstance(formatString.length());
+      _formatString = formatString;
+      _simpleFormatter = new ThreadLocal<BoboSimpleDecimalFormat>(){
+        protected BoboSimpleDecimalFormat initialValue() {
+          if (_formatString!=null){
+            return BoboSimpleDecimalFormat.getInstance(_formatString.length());
+          }
+          else{
+            return null;
+          }
+          
+        }
+      };
     } else
     {
       simpleFormat = false;
@@ -124,10 +159,25 @@ public class TermIntList extends TermNumberList {
     if (o instanceof String){
       number = parse((String)o);
     }
-    return _simpleFormatter.format(number);
+    return _simpleFormatter.get().format(number);
   }
 
   public String format(final Integer o) {
-    return _simpleFormatter.format(o);
+    return _simpleFormatter.get().format(o);
+  }
+
+  public String format(final int o) {
+    return _simpleFormatter.get().format(o);
+  }
+
+  @Override
+  public boolean containsWithType(Integer val)
+  {
+    return Arrays.binarySearch(_elements, val)>=0;
+  }
+
+  public boolean containsWithType(int val)
+  {
+    return Arrays.binarySearch(_elements, val)>=0;
   }
 }
